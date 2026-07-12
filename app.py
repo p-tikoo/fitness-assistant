@@ -1,4 +1,4 @@
-"""Fitness Assistant — a Streamlit app that builds personalized weekly plans
+"""Fitness Assistant that builds personalized weekly plans
 with Gemini and adapts them based on your weekly feedback.
 
 Run with:  streamlit run app.py
@@ -62,9 +62,19 @@ def add_feedback(entry):
 
 @st.cache_resource
 def get_client():
+    # Locally the key comes from .env (via load_dotenv); on Streamlit Cloud it
+    # comes from the app's Secrets, which aren't exposed as env vars.
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        st.error("GEMINI_API_KEY is not set. Add it to your .env file.")
+        try:
+            api_key = st.secrets["GEMINI_API_KEY"]
+        except Exception:
+            api_key = None
+    if not api_key:
+        st.error(
+            "GEMINI_API_KEY is not set. Locally, add it to your .env file. "
+            "On Streamlit Cloud, add it under Manage app → Settings → Secrets."
+        )
         st.stop()
     return genai.Client(api_key=api_key)
 
