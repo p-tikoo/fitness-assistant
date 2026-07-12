@@ -111,22 +111,6 @@ Keep it practical and safe. Respect any injuries or limitations."""
 
 # --- Presentation helpers -----------------------------------------------------
 
-def bmi_stats(height_cm, weight_kg):
-    """Return (value_str, category) for a BMI reading."""
-    if not height_cm:
-        return "—", ""
-    bmi = weight_kg / (height_cm / 100) ** 2
-    if bmi < 18.5:
-        cat = "Underweight"
-    elif bmi < 25:
-        cat = "Normal"
-    elif bmi < 30:
-        cat = "Overweight"
-    else:
-        cat = "Obese"
-    return f"{bmi:.1f}", cat
-
-
 def metric_cards(items):
     """items: list of (label, value, sub) tuples rendered as a row of cards."""
     cards = "".join(
@@ -140,44 +124,54 @@ def metric_cards(items):
     st.markdown(f'<div class="metric-row">{cards}</div>', unsafe_allow_html=True)
 
 
+def hero(title, subtitle):
+    st.markdown(
+        f'<div class="hero"><div class="hero-title">{title}</div>'
+        f'<div class="hero-sub">{subtitle}</div></div>',
+        unsafe_allow_html=True,
+    )
+
+
 CSS = """
 <style>
 .block-container { max-width: 920px; padding-top: 2rem; }
 
 /* Hero banner */
 .hero {
-    background: linear-gradient(120deg, #064e3b 0%, #059669 55%, #22c55e 100%);
+    background: linear-gradient(120deg, #059669 0%, #22c55e 60%, #4ade80 100%);
     border-radius: 20px;
     padding: 2.2rem 2.4rem;
     margin-bottom: 1.6rem;
-    box-shadow: 0 10px 30px rgba(16, 185, 129, 0.18);
+    box-shadow: 0 10px 30px rgba(16, 185, 129, 0.22);
 }
 .hero-title { font-size: 2.1rem; font-weight: 800; color: #ffffff; letter-spacing: -0.5px; }
-.hero-sub  { font-size: 1.02rem; color: rgba(255,255,255,0.88); margin-top: 0.35rem; }
+.hero-sub  { font-size: 1.02rem; color: rgba(255,255,255,0.92); margin-top: 0.35rem; }
 
 /* Metric cards */
 .metric-row { display: flex; flex-wrap: wrap; gap: 0.9rem; margin: 0.4rem 0 1.4rem; }
 .metric-card {
     flex: 1 1 150px;
-    background: #161b26;
-    border: 1px solid #263041;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     border-radius: 14px;
     padding: 1rem 1.1rem;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
 }
-.metric-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: #8b98ad; }
-.metric-value { font-size: 1.5rem; font-weight: 700; color: #e6edf3; margin-top: 0.15rem; line-height: 1.2; }
-.metric-sub   { font-size: 0.8rem; color: #22c55e; margin-top: 0.15rem; }
+.metric-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; }
+.metric-value { font-size: 1.5rem; font-weight: 700; color: #0f172a; margin-top: 0.15rem; line-height: 1.2; }
+.metric-sub   { font-size: 0.8rem; color: #16a34a; margin-top: 0.15rem; }
 
 /* Feedback timeline */
 .fb-item {
-    background: #161b26;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
     border-left: 3px solid #22c55e;
     border-radius: 8px;
     padding: 0.7rem 0.9rem;
     margin-bottom: 0.6rem;
 }
-.fb-date { font-size: 0.72rem; color: #8b98ad; text-transform: uppercase; letter-spacing: 0.05em; }
-.fb-text { font-size: 0.92rem; color: #d7dee8; margin-top: 0.15rem; }
+.fb-date { font-size: 0.72rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+.fb-text { font-size: 0.92rem; color: #334155; margin-top: 0.15rem; }
 
 /* Primary button polish */
 .stButton > button[kind="primary"] { border-radius: 10px; font-weight: 600; padding: 0.55rem 1.1rem; }
@@ -187,6 +181,9 @@ h3 { margin-top: 0.6rem; }
 </style>
 """
 
+GOALS = ["Lose fat", "Build muscle", "Improve endurance", "General fitness", "Strength"]
+LEVELS = ["Beginner", "Intermediate", "Advanced"]
+
 
 # --- UI -----------------------------------------------------------------------
 
@@ -195,9 +192,19 @@ st.markdown(CSS, unsafe_allow_html=True)
 
 profile = load_profile()
 
-with st.sidebar:
-    st.markdown("### ⚙️ Your Profile")
-    st.caption("Update anytime — plans use your latest details.")
+# Two-step flow: profile setup -> plan. New users start on the profile page;
+# returning users (profile already on file) land straight on the plan page.
+if "step" not in st.session_state:
+    st.session_state.step = "plan" if profile else "profile"
+
+
+# ---- Step 1: Profile ---------------------------------------------------------
+if st.session_state.step == "profile":
+    hero(
+        "Let's set up your profile" if not profile else "Edit your profile",
+        "Tell us about yourself — your plan is built around this.",
+    )
+
     with st.form("profile_form"):
         name = st.text_input("Name", value=(profile or {}).get("name", ""))
         col1, col2 = st.columns(2)
@@ -213,63 +220,61 @@ with st.sidebar:
             "Weight (kg)", 30, 300, value=(profile or {}).get("weight_kg", 70)
         )
         goal = st.selectbox(
-            "Primary goal",
-            ["Lose fat", "Build muscle", "Improve endurance", "General fitness", "Strength"],
-            index=["Lose fat", "Build muscle", "Improve endurance", "General fitness", "Strength"].index(
-                (profile or {}).get("goal", "General fitness")
-            ),
+            "Primary goal", GOALS,
+            index=GOALS.index((profile or {}).get("goal", "General fitness")),
         )
         experience = st.select_slider(
-            "Experience", ["Beginner", "Intermediate", "Advanced"],
+            "Experience", LEVELS,
             value=(profile or {}).get("experience", "Beginner"),
         )
         days_per_week = st.slider(
             "Days available per week", 1, 7, value=(profile or {}).get("days_per_week", 3)
         )
         equipment = st.text_input(
-            "Available equipment",
-            value=(profile or {}).get("equipment", "Bodyweight only"),
+            "Available equipment", value=(profile or {}).get("equipment", "Bodyweight only")
         )
         limitations = st.text_area(
             "Injuries / limitations", value=(profile or {}).get("limitations", "")
         )
-        saved = st.form_submit_button("💾 Save profile", type="primary", use_container_width=True)
+        saved = st.form_submit_button(
+            "Save & continue  →", type="primary", use_container_width=True
+        )
 
     if saved:
-        profile = {
+        save_profile({
             "name": name, "age": age, "sex": sex,
             "height_cm": height_cm, "weight_kg": weight_kg,
             "goal": goal, "experience": experience,
             "days_per_week": days_per_week, "equipment": equipment,
             "limitations": limitations,
-        }
-        save_profile(profile)
-        st.success("Profile saved!")
+        })
+        st.session_state.step = "plan"
+        st.rerun()
 
-# Hero header
-greeting = f"Welcome back, {profile['name']}" if profile and profile.get("name") else "💪 Fitness Assistant"
-subtitle = (
-    "Your adaptive weekly plan is ready to build."
-    if profile
-    else "AI-powered weekly plans that adapt to your feedback."
-)
-st.markdown(
-    f'<div class="hero"><div class="hero-title">{greeting}</div>'
-    f'<div class="hero-sub">{subtitle}</div></div>',
-    unsafe_allow_html=True,
-)
+    if profile:
+        if st.button("← Back to plan", use_container_width=True):
+            st.session_state.step = "plan"
+            st.rerun()
 
-if not profile:
-    st.info("👈 Fill in your profile in the sidebar to get started.")
     st.stop()
 
+
+# ---- Step 2: Plan ------------------------------------------------------------
+hero(
+    f"Welcome, {profile['name']}" if profile.get("name") else "Your weekly plan",
+    "Your adaptive weekly plan is ready to build.",
+)
+
+_, edit_col = st.columns([3, 1])
+if edit_col.button("⚙️ Edit profile", use_container_width=True):
+    st.session_state.step = "profile"
+    st.rerun()
+
 # Profile stats
-bmi_val, bmi_cat = bmi_stats(profile["height_cm"], profile["weight_kg"])
 metric_cards([
     ("Goal", profile["goal"], profile["experience"]),
     ("Training days", f"{profile['days_per_week']}/wk", profile["equipment"][:22]),
     ("Weight", f"{profile['weight_kg']} kg", f"{profile['height_cm']} cm tall"),
-    ("BMI", bmi_val, bmi_cat),
 ])
 
 # Plan generation
