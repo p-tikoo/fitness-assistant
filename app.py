@@ -144,55 +144,60 @@ def hero(title, subtitle):
 
 CSS = """
 <style>
-.block-container { max-width: 920px; padding-top: 2rem; }
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
 
-/* Hero banner */
+html, body, [class*="css"], .stMarkdown, .block-container,
+.stButton > button, input, textarea, select { font-family: 'Nunito', sans-serif; }
+.block-container { max-width: 880px; padding-top: 2.2rem; }
+
+/* Header band */
 .hero {
-    background: linear-gradient(120deg, #059669 0%, #22c55e 60%, #4ade80 100%);
-    border-radius: 20px;
-    padding: 2.2rem 2.4rem;
+    background: #fbeee3;
+    border: 1px solid #f0dcc9;
+    border-radius: 18px;
+    padding: 2rem 2.2rem;
     margin-bottom: 1.6rem;
-    box-shadow: 0 10px 30px rgba(16, 185, 129, 0.22);
 }
-.hero-title { font-size: 2.1rem; font-weight: 800; color: #ffffff; letter-spacing: -0.5px; }
-.hero-sub  { font-size: 1.02rem; color: rgba(255,255,255,0.92); margin-top: 0.35rem; }
+.hero-title { font-size: 1.9rem; font-weight: 800; color: #7a3e1d; letter-spacing: -0.3px; }
+.hero-sub  { font-size: 1rem; color: #a97c5c; margin-top: 0.35rem; }
 
 /* Metric cards */
 .metric-row { display: flex; flex-wrap: wrap; gap: 0.9rem; margin: 0.4rem 0 1.4rem; }
 .metric-card {
     flex: 1 1 150px;
     background: #ffffff;
-    border: 1px solid #e2e8f0;
+    border: 1px solid #ece1d4;
     border-radius: 14px;
     padding: 1rem 1.1rem;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
 }
-.metric-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; }
-.metric-value { font-size: 1.5rem; font-weight: 700; color: #0f172a; margin-top: 0.15rem; line-height: 1.2; }
-.metric-sub   { font-size: 0.8rem; color: #16a34a; margin-top: 0.15rem; }
+.metric-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: #a1917f; font-weight: 700; }
+.metric-value { font-size: 1.5rem; font-weight: 800; color: #33302c; margin-top: 0.15rem; line-height: 1.2; }
+.metric-sub   { font-size: 0.8rem; color: #c2703d; margin-top: 0.15rem; font-weight: 600; }
 
 /* Feedback timeline */
 .fb-item {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-left: 3px solid #22c55e;
-    border-radius: 8px;
+    background: #fbf6f0;
+    border: 1px solid #efe4d6;
+    border-left: 3px solid #c2703d;
+    border-radius: 10px;
     padding: 0.7rem 0.9rem;
     margin-bottom: 0.6rem;
 }
-.fb-date { font-size: 0.72rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
-.fb-text { font-size: 0.92rem; color: #334155; margin-top: 0.15rem; }
+.fb-date { font-size: 0.72rem; color: #a1917f; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
+.fb-text { font-size: 0.92rem; color: #4a4234; margin-top: 0.15rem; }
 
-/* Primary button polish */
-.stButton > button[kind="primary"] { border-radius: 10px; font-weight: 600; padding: 0.55rem 1.1rem; }
+/* Buttons */
+.stButton > button { border-radius: 10px; font-weight: 700; }
+.stButton > button[kind="primary"] { padding: 0.55rem 1.1rem; }
 
 /* Section headings */
-h3 { margin-top: 0.6rem; }
+h3 { margin-top: 0.6rem; font-weight: 800; color: #33302c; }
 </style>
 """
 
 GOALS = ["Lose fat", "Build muscle", "Improve endurance", "General fitness", "Strength"]
 LEVELS = ["Beginner", "Intermediate", "Advanced"]
+EQUIPMENT = ["Bodyweight only", "Dumbbells", "Resistance bands", "Full gym access"]
 
 
 # --- UI -----------------------------------------------------------------------
@@ -240,8 +245,10 @@ if st.session_state.step == "profile":
         days_per_week = st.slider(
             "Days available per week", 1, 7, value=(profile or {}).get("days_per_week", 3)
         )
-        equipment = st.text_input(
-            "Available equipment", value=(profile or {}).get("equipment", "Bodyweight only")
+        saved_equipment = (profile or {}).get("equipment", "Bodyweight only")
+        equipment = st.selectbox(
+            "Available equipment", EQUIPMENT,
+            index=EQUIPMENT.index(saved_equipment) if saved_equipment in EQUIPMENT else 0,
         )
         limitations = st.text_area(
             "Injuries / limitations", value=(profile or {}).get("limitations", "")
@@ -276,7 +283,7 @@ hero(
 )
 
 _, edit_col = st.columns([3, 1])
-if edit_col.button("⚙️ Edit profile", use_container_width=True):
+if edit_col.button("Edit profile", use_container_width=True):
     st.session_state.step = "profile"
     st.rerun()
 
@@ -289,8 +296,8 @@ metric_cards([
 
 # Plan generation
 left, right = st.columns([3, 1])
-left.markdown("### 🗓️ This week's plan")
-if right.button("✨ Generate", type="primary", use_container_width=True):
+left.markdown("### This week's plan")
+if right.button("Generate", type="primary", use_container_width=True):
     with st.spinner("Building your personalized plan..."):
         st.session_state.plan = generate_plan(profile, load_feedback())
 
@@ -298,18 +305,18 @@ if st.session_state.get("plan"):
     with st.container(border=True):
         st.markdown(st.session_state.plan)
     st.download_button(
-        "⬇️ Download plan (Markdown)",
+        "Download plan (Markdown)",
         st.session_state.plan,
         file_name=f"fitness-plan-{date.today().isoformat()}.md",
         mime="text/markdown",
     )
 else:
-    st.info("Hit **✨ Generate** to create your personalized 7-day plan.")
+    st.info("Hit **Generate** to create your personalized 7-day plan.")
 
 st.divider()
 
 # Feedback
-st.markdown("### 📝 Weekly feedback")
+st.markdown("### Weekly feedback")
 st.caption("How did last week go? Your feedback shapes the next plan.")
 
 fb_left, fb_right = st.columns([1, 1])
